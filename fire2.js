@@ -142,6 +142,8 @@ var spin = 0;
 
 var particleVertexPositionBuffer;
 var particleVertexTextureCoordBuffer;
+var floorVertexPositionBuffer;
+var floorVetexTextureCoordBuffer;
 function initBuffers(){
 	//create a square
 	particleVertexPositionBuffer = gl.createBuffer();
@@ -164,6 +166,40 @@ function initBuffers(){
 	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoords), gl.STATIC_DRAW);
 	particleVertexTextureCoordBuffer.itemSize = 2;
 	particleVertexTextureCoordBuffer.numItems = 4;
+
+	floorVertexPositionBuffer = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, floorVertexPositionBuffer);
+	var floor = [
+             5.0, 0.0, 5.0,
+            -5.0, 0.0, 5.0,
+             5.0, 0.0, -5.0,
+            -5.0, 0.0, -5.0,
+        ];
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(floor), gl.STATIC_DRAW);
+	floorVertexPositionBuffer.itemSize = 3;
+	floorVertexPositionBuffer.numItems = 4;
+
+	floorVetexTextureCoordBuffer = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, floorVetexTextureCoordBuffer);
+	var floorTexture = [0.0, 0.0,
+						1.0, 0.0,
+						0.0, 1.0,
+						1.0, 1.0];
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(floorTexture), gl.STATIC_DRAW);
+	particleVertexTextureCoordBuffer.itemSize = 2;
+	particleVertexTextureCoordBuffer.numItems = 4;
+}
+
+function drawFloor(){
+	//set color  and opacity
+	gl.uniform3f(shaderProgram.colorUniform, 0.5, 0.5, 0.5);
+	gl.uniform1f(shaderProgram.opacityUniform, 1.0)
+
+	gl.bindBuffer(gl.ARRAY_BUFFER, floorVertexPositionBuffer);
+	gl.vertexAttribPointer(shaderProgram.vertexAttribPointer, floorVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+	setMatrixUniforms();
+	gl.drawArrays(gl.TRIANGLE_STRIP, 0, floorVertexPositionBuffer.numItems);
 }
 
 function drawParticle(){
@@ -288,7 +324,7 @@ function initWorldObjects(){
 		particles.push(new Particle(Math.random()*4 - 2));
 	}
 }
-
+var rFloor = 0;
 function drawScene(){
 	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -300,16 +336,27 @@ function drawScene(){
 
 	mat4.identity(mvMatrix);
 	mat4.translate(mvMatrix, [0.0, 0.0, zoom]);
+	mat4.rotate(mvMatrix, degToRad(rFloor), [0.0, 1.0, 0.0])
+
+	mvPushMatrix();
+	//move and rotate particle
+	mat4.translate(mvMatrix, [0.0, -4.5, 0.0]);
+
+	drawFloor();
+
+	mvPopMatrix();
 
 	for(var i in particles){
 		particles[i].draw();
 	}
 }
-
+var elapsed = 0;
 function animate(){
 	var timeNow = new Date().getTime();
 	if(lastTime != 0){
-		var elapsed = timeNow - lastTime;
+		elapsed = timeNow - lastTime;
+
+		rFloor += (10 * elapsed) / 1000.0;
 
 		// make each particle move
 		for(var i in particles){

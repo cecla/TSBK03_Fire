@@ -3,6 +3,16 @@
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 	<title>Fire</title>
+
+	<style>
+		#center {
+			text-align: center;
+		}
+		canvas {
+			width: 50em;
+			height: 50em;
+		}
+	</style>
 	
 	<script type="text/javascript" src="glMatrix-0.9.5.min.js"></script>
 	<script type="text/javascript" src="webgl-utils.js"></script>
@@ -19,7 +29,11 @@
 
 		void main(void){
 			vec4 textureColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
-			gl_FragColor = textureColor * vec4(uColor, uOpacity);
+			if(uColor.x == 0.5 && uColor.y == 0.5 && uColor.z == 0.5){
+				gl_FragColor =  vec4(uColor, uOpacity);
+			} else {
+				gl_FragColor = textureColor * vec4(uColor, uOpacity);
+			}
 		}
 	</script>
 	<!--VERTEX SHADER-->
@@ -40,10 +54,12 @@
 		}
 	</script>
 
-	<script type="text/javascript" src="fire2.js"></script>
+	<script type="text/javascript" src="fire_3d.js"></script>
 </head>
 <body onload="webGLStart();">
-	<p>This is a project in course TSBK03, LiU</p>
-	<canvas id="gl" width="500" height="500"></canvas>
+	<div id="center">
+		<p>This is a project in course TSBK03, LiU</p>
+		<canvas id="gl"></canvas>
+	</div>
 </body>
 </html>
