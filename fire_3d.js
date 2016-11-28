@@ -10,6 +10,13 @@ var lastTime = 0;
 
 function initGL(canvas){
 	try{
+		var displayWidth = canvas.clientWidth;
+		var displayHeight = canvas.clientHeight;
+
+		if(canvas.width != displayWidth || canvas.height != displayHeight) {
+			canvas.width = displayWidth;
+			canvas.height = displayHeight;
+		}
 		gl = canvas.getContext("experimental-webgl");
 		gl.viewportWidth = canvas.width;
 		gl.viewportHeight = canvas.height;
@@ -90,6 +97,7 @@ function initShaders(){
 	shaderProgram.samplerUniform = gl.getUniformLocation(shaderProgram, "uSampler");
 	shaderProgram.colorUniform = gl.getUniformLocation(shaderProgram, "uColor");
 	shaderProgram.opacityUniform = gl.getUniformLocation(shaderProgram, "uOpacity");
+	shaderProgram.smokeUniform = gl.getUniformLocation(shaderProgram, "smoke");
 }
 
 function handleLoadedTexture(texture){
@@ -110,7 +118,6 @@ function initTexture(){
 		handleLoadedTexture(particleTexture);
 	}
 	///Users/cecilialagerwall/Documents/Skola/TSBK03 - Datorspel/projekt
-	//particleTexture.image.src = "star.gif";
 	particleTexture.image.src = "circle.gif";
 }
 
@@ -193,7 +200,8 @@ function initBuffers(){
 function drawFloor(){
 	//set color  and opacity
 	gl.uniform3f(shaderProgram.colorUniform, 0.5, 0.5, 0.5);
-	gl.uniform1f(shaderProgram.opacityUniform, 1.0)
+	gl.uniform1f(shaderProgram.opacityUniform, 1.0);
+	gl.uniform1f(shaderProgram.smokeUniform, 1.0);
 
 	gl.bindBuffer(gl.ARRAY_BUFFER, floorVertexPositionBuffer);
 	gl.vertexAttribPointer(shaderProgram.vertexAttribPointer, floorVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
@@ -261,14 +269,34 @@ function tryPoint(x, y){
 
 	return apd + dpc + cpb + pba;
 }
+
+
 var max = 60;
 var min = 10;
-Particle.prototype.animate = function(elapsedTime){
+SmokeParticle.prototype.animate = function(elapsedTime){
 	this.y += 0.01 * effectiveFPMS * elapsedTime;
 	this.life -= 0.1;
+	
+	this.a = Math.min(0.2, this.life / max - 0.1);
+
+	this.x += Math.cos(Math.random()*2 * Math.PI)*effectiveFPMS;
+	this.z += Math.cos(Math.random()*2 * Math.PI)*effectiveFPMS;
+
+	if(this.life < 0.0){
+		this.y = -(Math.random()*2 + 2);
+		this.x = Math.random()*4 - 2;
+		this.z = Math.random()*2*Math.sqrt(4 - Math.pow(this.x, 2)) - Math.sqrt(4 - Math.pow(this.x, 2));
+		this.life = Math.random()*60;
+	}
+};
+
+Particle.prototype.animate = function(elapsedTime){
+	this.y += 0.01 * effectiveFPMS * elapsedTime;
+	this.life -= 0.2;
 
 	//will start over by a reset
 	this.g = Math.max(0.2, this.life / max);
+	
 	this.a = Math.min(0.2, this.life / max - 0.1);
 
 	this.x += Math.cos(Math.random()*2 * Math.PI)*effectiveFPMS;
@@ -289,8 +317,9 @@ Particle.prototype.animate = function(elapsedTime){
 		this.x = Math.random()*4 - 2;
 		this.z = Math.random()*2*Math.sqrt(4 - Math.pow(this.x, 2)) - Math.sqrt(4 - Math.pow(this.x, 2));
 		this.life = Math.random()*60;
-		this.r = 1.0;
+		this.r = 0.7;
 		this.b = 0.0;
+		this.smoke = false;
 	}
 };
 
@@ -302,34 +331,69 @@ function Particle(x, z){
 	this.x = x;
 	this.z = z;
 	this.life = Math.random()*60;
-
+	this.smoke = false;
 }
 
 Particle.prototype.draw = function(){
 	mvPushMatrix();
-	//move and rotate particle
+	//first rotate to face the viewer and then translate the particle to right place
 	mat4.translate(mvMatrix, [this.x, this.y, this.z]);
 	mat4.rotate(mvMatrix, degToRad(-rFloor), [0.0, 1.0, 0.0]);
 
 	//set color  and opacity
 	gl.uniform3f(shaderProgram.colorUniform, this.r, this.g, this.b);
-	gl.uniform1f(shaderProgram.opacityUniform, this.a)
+	gl.uniform1f(shaderProgram.opacityUniform, this.a);
+	gl.uniform1f(shaderProgram.smokeUniform, 0.0);
 	drawParticle();
 
 	mvPopMatrix();
 };
 
+SmokeParticle.prototype.draw = function(){
+	mvPushMatrix();
+	//first rotate to face the viewer and then translate the particle to right place
+	mat4.translate(mvMatrix, [this.x, this.y, this.z]);
+	mat4.rotate(mvMatrix, degToRad(-rFloor), [0.0, 1.0, 0.0]);
+
+	//set color  and opacity
+	gl.uniform3f(shaderProgram.colorUniform, this.r, this.g, this.b);
+	gl.uniform1f(shaderProgram.opacityUniform, this.a);
+	gl.uniform1f(shaderProgram.smokeUniform, 0.0);
+	drawParticle();
+
+	mvPopMatrix();
+};
+
+function SmokeParticle(x, y, z){
+	this.r = 0.35;
+	this.g = 0.35;
+	this.b = 0.35;
+	this.a = 1.0;
+	this.y = y;
+	this.x = x;
+	this.z = z;
+	this.life = Math.random()*60;
+}
+
 var particles = [];
+var smokeParticles = [];
 function initWorldObjects(){
-	var numParticles = 800;
+	var numParticles = 1000;
 
 	//create particles
 	for(var i = 0; i < numParticles; i++){
 		var x = Math.random()*4 - 2;
 		var z = Math.random()*2*Math.sqrt(4 - Math.pow(x, 2)) - Math.sqrt(4 - Math.pow(x, 2));
 		particles.push(new Particle(x, z));
+		if(i < numParticles/3){
+			x = Math.random()*4 - 2;
+			var y = -(Math.random()*2 + 2);
+			z = Math.random()*2*Math.sqrt(4 - Math.pow(x, 2)) - Math.sqrt(4 - Math.pow(x, 2));
+			smokeParticles.push(new SmokeParticle(x, y, z));
+		}
 	}
 }
+
 var rFloor = 0;
 function drawScene(){
 	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
@@ -337,25 +401,30 @@ function drawScene(){
 
 	mat4.perspective(45, gl.viewportWidth/gl.viewportHeight, 0.1, 100.0, pMatrix);
 
-	gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-	gl.enable(gl.BLEND);
-
 	mat4.identity(mvMatrix);
 	mat4.translate(mvMatrix, [0.0, 0.0, zoom]);
 	mat4.rotate(mvMatrix, degToRad(rFloor), [0.0, 1.0, 0.0]);
 
 	mvPushMatrix();
 	//move and rotate particle
-	mat4.translate(mvMatrix, [0.0, -4.5, 0.0]);
+	mat4.translate(mvMatrix, [0.0, -4.0, 0.0]);
 
 	drawFloor();
 
+
 	mvPopMatrix();
+	gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+	gl.enable(gl.BLEND);
+
+	for(var i in smokeParticles){
+		smokeParticles[i].draw();
+	}
 
 	for(var i in particles){
 		particles[i].draw();
 	}
 }
+
 var elapsed = 0;
 function animate(){
 	var timeNow = new Date().getTime();
@@ -367,6 +436,9 @@ function animate(){
 		// make each particle move
 		for(var i in particles){
 			particles[i].animate(elapsed);
+		}
+		for(var i in smokeParticles){
+			smokeParticles[i].animate(elapsed);
 		}
 	}
 	lastTime = timeNow;
@@ -393,6 +465,7 @@ function webGLStart(){
 
 	//background
 	gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
 
 	tick();
 }

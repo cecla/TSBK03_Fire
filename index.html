@@ -5,12 +5,13 @@
 	<title>Fire</title>
 
 	<style>
-		#center {
-			text-align: center;
+		body {
+			overflow: hidden;
 		}
 		canvas {
-			width: 50em;
-			height: 50em;
+			width: 99vw;
+			height: 98vh;
+			display: block;
 		}
 	</style>
 	
@@ -23,14 +24,16 @@
 		varying vec2 vTextureCoord;
 
 		uniform sampler2D uSampler;
+		
+		uniform float smoke;
 
 		uniform vec3 uColor;
 		uniform float uOpacity;
 
 		void main(void){
 			vec4 textureColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
-			if(uColor.x == 0.5 && uColor.y == 0.5 && uColor.z == 0.5){
-				gl_FragColor =  vec4(uColor, uOpacity);
+			if(smoke == 1.0){
+				gl_FragColor =   vec4(uColor, uOpacity);
 			} else {
 				gl_FragColor = textureColor * vec4(uColor, uOpacity);
 			}
@@ -54,11 +57,10 @@
 		}
 	</script>
 
-	<script type="text/javascript" src="fire_3d.js"></script>
+	<script type="text/javascript" src="fire2.js"></script>
 </head>
 <body onload="webGLStart();">
 	<div id="center">
-		<p>This is a project in course TSBK03, LiU</p>
 		<canvas id="gl"></canvas>
 	</div>
 </body>

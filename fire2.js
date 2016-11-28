@@ -10,6 +10,13 @@ var lastTime = 0;
 
 function initGL(canvas){
 	try{
+		var displayWidth = canvas.clientWidth;
+		var displayHeight = canvas.clientHeight;
+
+		if(canvas.width != displayWidth || canvas.height != displayHeight) {
+			canvas.width = displayWidth;
+			canvas.height = displayHeight;
+		}
 		gl = canvas.getContext("experimental-webgl");
 		gl.viewportWidth = canvas.width;
 		gl.viewportHeight = canvas.height;
@@ -90,6 +97,7 @@ function initShaders(){
 	shaderProgram.samplerUniform = gl.getUniformLocation(shaderProgram, "uSampler");
 	shaderProgram.colorUniform = gl.getUniformLocation(shaderProgram, "uColor");
 	shaderProgram.opacityUniform = gl.getUniformLocation(shaderProgram, "uOpacity");
+	shaderProgram.smokeUniform = gl.getUniformLocation(shaderProgram, "smoke");
 }
 
 function handleLoadedTexture(texture){
@@ -193,7 +201,8 @@ function initBuffers(){
 function drawFloor(){
 	//set color  and opacity
 	gl.uniform3f(shaderProgram.colorUniform, 0.5, 0.5, 0.5);
-	gl.uniform1f(shaderProgram.opacityUniform, 1.0)
+	gl.uniform1f(shaderProgram.opacityUniform, 1.0);
+	gl.uniform1f(shaderProgram.smokeUniform, 1.0);
 
 	gl.bindBuffer(gl.ARRAY_BUFFER, floorVertexPositionBuffer);
 	gl.vertexAttribPointer(shaderProgram.vertexAttribPointer, floorVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
@@ -309,7 +318,8 @@ Particle.prototype.draw = function(){
 
 	//set color  and opacity
 	gl.uniform3f(shaderProgram.colorUniform, this.r, this.g, this.b);
-	gl.uniform1f(shaderProgram.opacityUniform, this.a)
+	gl.uniform1f(shaderProgram.opacityUniform, this.a);
+	gl.uniform1f(shaderProgram.smokeUniform, 0.0);
 	drawParticle();
 
 	mvPopMatrix();
