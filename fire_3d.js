@@ -117,8 +117,8 @@ function initTexture(){
 	particleTexture.image.onload = function(){
 		handleLoadedTexture(particleTexture);
 	}
-	///Users/cecilialagerwall/Documents/Skola/TSBK03 - Datorspel/projekt
-	particleTexture.image.src = "circle.gif";
+
+	particleTexture.image.src = "./circle.gif";
 }
 
 function mvPushMatrix(){
@@ -144,21 +144,19 @@ function setMatrixUniforms(){
 }
 
 var zoom = -20;
-var tilt = 90;
-var spin = 0;
 
 var particleVertexPositionBuffer;
 var particleVertexTextureCoordBuffer;
 var floorVertexPositionBuffer;
 var floorVetexTextureCoordBuffer;
 function initBuffers(){
-	//create a square
+	//PARTICLES
 	particleVertexPositionBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ARRAY_BUFFER, particleVertexPositionBuffer);
-	var vertices = [-1.0 , -1.0, 0.0,
-				1.0, -1.0, 0.0,
-				-1.0, 1.0, 0.0,
-				1.0, 1.0, 0.0];
+	var vertices = [-1 , -1, 0.0,
+				1, -1, 0.0,
+				-1, 1, 0.0,
+				1, 1, 0.0];
 
 	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
 	particleVertexPositionBuffer.itemSize = 3;
@@ -174,6 +172,7 @@ function initBuffers(){
 	particleVertexTextureCoordBuffer.itemSize = 2;
 	particleVertexTextureCoordBuffer.numItems = 4;
 
+	//FLOOR
 	floorVertexPositionBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ARRAY_BUFFER, floorVertexPositionBuffer);
 	var floor = [
@@ -185,23 +184,13 @@ function initBuffers(){
 	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(floor), gl.STATIC_DRAW);
 	floorVertexPositionBuffer.itemSize = 3;
 	floorVertexPositionBuffer.numItems = 4;
-
-	floorVetexTextureCoordBuffer = gl.createBuffer();
-	gl.bindBuffer(gl.ARRAY_BUFFER, floorVetexTextureCoordBuffer);
-	var floorTexture = [0.0, 0.0,
-						1.0, 0.0,
-						0.0, 1.0,
-						1.0, 1.0];
-	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(floorTexture), gl.STATIC_DRAW);
-	particleVertexTextureCoordBuffer.itemSize = 2;
-	particleVertexTextureCoordBuffer.numItems = 4;
 }
 
 function drawFloor(){
-	//set color  and opacity
-	gl.uniform3f(shaderProgram.colorUniform, 0.5, 0.5, 0.5);
+	
+	gl.uniform3f(shaderProgram.colorUniform, 0.5, 0.5, 0.5); //gray floor
 	gl.uniform1f(shaderProgram.opacityUniform, 1.0);
-	gl.uniform1f(shaderProgram.smokeUniform, 1.0);
+	gl.uniform1f(shaderProgram.smokeUniform, 1.0); //no texture added
 
 	gl.bindBuffer(gl.ARRAY_BUFFER, floorVertexPositionBuffer);
 	gl.vertexAttribPointer(shaderProgram.vertexAttribPointer, floorVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
@@ -210,6 +199,7 @@ function drawFloor(){
 	gl.drawArrays(gl.TRIANGLE_STRIP, 0, floorVertexPositionBuffer.numItems);
 }
 
+//draw both fire and smoke particles
 function drawParticle(){
 	gl.activeTexture(gl.TEXTURE0);
 	gl.bindTexture(gl.TEXTURE_2D, particleTexture);
@@ -225,54 +215,61 @@ function drawParticle(){
 	gl.drawArrays(gl.TRIANGLE_STRIP, 0, particleVertexPositionBuffer.numItems);
 }
 
-//changing colors
-//Between 0.5 and 0.9
-Particle.prototype.randomiseColors = function(){
-	this.g = Math.random() * 0.4 + 0.4;
-};
-
-//Between 0.6 and 1.0
-Particle.prototype.randomiseColors2 = function(){
-	this.g = Math.random() * 0.4 + 0.5;
-}
-
 var effectiveFPMS = 60/1000;
-
-/*
-line1-2: y=+-2x+11
-line3-4: y=+-8/3x-3
-
-points: A(0,11), B(3,5), C(-3,5), D(0,-3)
-*/
-
-var A = [0, 11];
-var B = [5, 5];
-var C = [-5, 5];
-var D = [0, -10];
-
-var recArea = calculateTriangle(A[0], A[1], B[0], B[1], C[0], C[1]) + calculateTriangle(D[0], D[1], B[0], B[1], C[0], C[1]);
-//console.log(recArea);
-
-function calculateTriangle(x1, y1, x2, y2, x3, y3){
-	return Math.abs((x1*(y2-y3) + x2*(y3-y1) + x3*(y1-y2)) / 0.5);
-}
-
-function tryPoint(x, y){
-	//APD
-	var apd = calculateTriangle(A[0], A[1], x, y, D[0], D[1]);
-	//DPC
-	var dpc = calculateTriangle(D[0], D[1], x, y, C[0], C[1]);
-	//CPB
-	var cpb = calculateTriangle(C[0], C[1], x, y, B[0], B[1]);
-	//PBA
-	var pba = calculateTriangle(x , y, B[0], B[1], A[0], A[1]);
-
-	return apd + dpc + cpb + pba;
-}
-
 
 var max = 60;
 var min = 10;
+
+Particle.prototype.animate = function(elapsedTime){
+	this.y += 0.01 * effectiveFPMS * elapsedTime;
+	this.life -= 0.2;
+
+	//will start over by a reset
+	this.g = Math.max(0.2, this.life / max);
+	
+	this.a = Math.min(0.2, this.life / max - 0.1);
+
+	this.x += Math.cos(Math.random()*2 * Math.PI)*effectiveFPMS;
+	this.z += Math.cos(Math.random()*2 * Math.PI)*effectiveFPMS;
+
+	//dead - reset
+	if(this.life < 0.0){
+		this.y = -4;
+		this.x = Math.random()*4 - 2;
+		this.z = Math.random()*2*Math.sqrt(4 - Math.pow(this.x, 2)) - Math.sqrt(4 - Math.pow(this.x, 2));
+		this.life = Math.random()*60;
+		this.r = 0.7;
+		this.b = 0.0;
+		this.smoke = false;
+	}
+};
+
+Particle.prototype.draw = function(){
+	mvPushMatrix();
+	//first rotate to face the viewer and then translate the particle to right place
+	mat4.translate(mvMatrix, [this.x, this.y, this.z]);
+	mat4.rotate(mvMatrix, degToRad(-rFloor), [0.0, 1.0, 0.0]);
+
+	//set color  and opacity
+	gl.uniform3f(shaderProgram.colorUniform, this.r, this.g, this.b);
+	gl.uniform1f(shaderProgram.opacityUniform, this.a);
+	gl.uniform1f(shaderProgram.smokeUniform, 0.0);
+	drawParticle();
+
+	mvPopMatrix();
+};
+
+//starting values for particles
+function Particle(x, z){
+	this.r = 1.0;
+	this.a = 0.3;
+	this.y = -4.0;
+	this.x = x;
+	this.z = z;
+	this.life = Math.random()*60;
+	this.smoke = false;
+}
+
 SmokeParticle.prototype.animate = function(elapsedTime){
 	this.y += 0.01 * effectiveFPMS * elapsedTime;
 	this.life -= 0.1;
@@ -288,65 +285,6 @@ SmokeParticle.prototype.animate = function(elapsedTime){
 		this.z = Math.random()*2*Math.sqrt(4 - Math.pow(this.x, 2)) - Math.sqrt(4 - Math.pow(this.x, 2));
 		this.life = Math.random()*60;
 	}
-};
-
-Particle.prototype.animate = function(elapsedTime){
-	this.y += 0.01 * effectiveFPMS * elapsedTime;
-	this.life -= 0.2;
-
-	//will start over by a reset
-	this.g = Math.max(0.2, this.life / max);
-	
-	this.a = Math.min(0.2, this.life / max - 0.1);
-
-	this.x += Math.cos(Math.random()*2 * Math.PI)*effectiveFPMS;
-	this.z += Math.cos(Math.random()*2 * Math.PI)*effectiveFPMS;
-
-	//outside
-	/*if(recArea < tryPoint(this.ydist, this.dist)){
-		if(this.x > 0){
-			this.x -= Math.random();
-		} else {
-			this.x += Math.random();
-		}
-	}*/
-
-	//dead - reset
-	if(this.life < 0.0){
-		this.y = -4;
-		this.x = Math.random()*4 - 2;
-		this.z = Math.random()*2*Math.sqrt(4 - Math.pow(this.x, 2)) - Math.sqrt(4 - Math.pow(this.x, 2));
-		this.life = Math.random()*60;
-		this.r = 0.7;
-		this.b = 0.0;
-		this.smoke = false;
-	}
-};
-
-//starting values for particles
-function Particle(x, z){
-	this.r = 1.0;
-	this.a = 0.3;
-	this.y = -4.0;
-	this.x = x;
-	this.z = z;
-	this.life = Math.random()*60;
-	this.smoke = false;
-}
-
-Particle.prototype.draw = function(){
-	mvPushMatrix();
-	//first rotate to face the viewer and then translate the particle to right place
-	mat4.translate(mvMatrix, [this.x, this.y, this.z]);
-	mat4.rotate(mvMatrix, degToRad(-rFloor), [0.0, 1.0, 0.0]);
-
-	//set color  and opacity
-	gl.uniform3f(shaderProgram.colorUniform, this.r, this.g, this.b);
-	gl.uniform1f(shaderProgram.opacityUniform, this.a);
-	gl.uniform1f(shaderProgram.smokeUniform, 0.0);
-	drawParticle();
-
-	mvPopMatrix();
 };
 
 SmokeParticle.prototype.draw = function(){
@@ -378,7 +316,7 @@ function SmokeParticle(x, y, z){
 var particles = [];
 var smokeParticles = [];
 function initWorldObjects(){
-	var numParticles = 1000;
+	var numParticles = 10000;
 
 	//create particles
 	for(var i = 0; i < numParticles; i++){
@@ -411,18 +349,21 @@ function drawScene(){
 
 	drawFloor();
 
-
 	mvPopMatrix();
-	gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-	gl.enable(gl.BLEND);
+	
 
 	for(var i in smokeParticles){
 		smokeParticles[i].draw();
 	}
 
+	
+
 	for(var i in particles){
 		particles[i].draw();
 	}
+
+	gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+	gl.enable(gl.BLEND);
 }
 
 var elapsed = 0;
@@ -465,7 +406,6 @@ function webGLStart(){
 
 	//background
 	gl.clearColor(0.0, 0.0, 0.0, 1.0);
-
 
 	tick();
 }

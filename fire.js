@@ -233,26 +233,26 @@ Particle.prototype.animate = function(elapsedTime){
 
 	this.ydist += Math.cos(Math.random()*2 * Math.PI)*effectiveFPMS;
 
-	//outside
+	/*//outside
 	if(recArea < tryPoint(this.ydist, this.dist)){
 		if(this.ydist > 0){
 			this.ydist -= Math.random();
 		} else {
 			this.ydist += Math.random();
 		}
-	}
+	}*/
 	
 	this.a -= 0.0001;
 
 	if(Math.random() > 0.9) this.a -= 0.001;
 
-	if(this.dist < -3.0){
+	if(this.dist < -4.0){
 		this.dist += 10.0;
 		this.ydist = -1 * (Math.random() * 4) + 2;
 		this.a = 0.1;
 	}
 	//orange
-	if(this.dist < 3.5 && this.dist > 2.5) {
+	if(this.dist < 3.5 && this.dist > 3.0) {
 		this.randomiseColors();
 		this.r = 1.0;
 		this.b = 0.0;
@@ -299,7 +299,7 @@ Particle.prototype.draw = function(tilt, spin){
 
 var particles = [];
 function initWorldObjects(){
-	var numParticles = 1500;
+	var numParticles = 3000;
 
 	for(var i = 0; i < numParticles; i++){
 		particles.push(new Particle((i/numParticles) * 10.0, i/numParticles));
